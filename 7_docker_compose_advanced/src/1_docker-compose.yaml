@@ -1,0 +1,132 @@
+version: '3.9'
+
+services:
+
+  config-server:
+    image: springcommunity/spring-petclinic-config-server
+    restart: always
+    container_name: config-server
+    environment:
+      SPRING_PROFILES_ACTIVE: native
+      GIT_REPO: /config_folder
+    volumes:
+      - ./petclinic/spring-petclinic-microservices-config:/config_folder
+    healthcheck:
+      test: curl -f http://localhost:8888/actuator/health
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '512M'
+
+  discovery-server:
+    image: springcommunity/spring-petclinic-discovery-server
+    container_name: discovery-server
+    restart: always
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:8761/actuator/health
+      interval: 5s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '512M'
+
+  customers-service:
+    image: springcommunity/spring-petclinic-customers-service
+    container_name: customers-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,mysql
+      MYSQL_URL: jdbc:mysql://petclinicdb/petclinic?useSSL=false
+      MYSQL_USER: petclinic
+      MYSQL_PASSWORD: petclinic
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      petclinicdb:
+        condition: service_healthy
+
+  visits-service:
+    image: springcommunity/spring-petclinic-visits-service
+    container_name: visits-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,mysql
+      MYSQL_URL: jdbc:mysql://petclinicdb/petclinic?useSSL=false
+      MYSQL_USER: petclinic
+      MYSQL_PASSWORD: petclinic
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      petclinicdb:
+        condition: service_healthy
+
+  vets-service:
+    image: springcommunity/spring-petclinic-vets-service
+    container_name: vets-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker,mysql
+      MYSQL_URL: jdbc:mysql://petclinicdb/petclinic?useSSL=false
+      MYSQL_USER: petclinic
+      MYSQL_PASSWORD: petclinic
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      petclinicdb:
+        condition: service_healthy
+
+  api-gateway:
+    image: springcommunity/spring-petclinic-api-gateway
+    container_name: api-gateway
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    ports:
+      - 8080:8080
+
+  admin-server:
+    image: springcommunity/spring-petclinic-admin-server
+    container_name: admin-server
+    depends_on:
+      config-server:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    ports:
+      - 9090:9090
+
+  petclinicdb:
+    container_name: database
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: password # just needed for root user
+      MYSQL_USER: petclinic
+      MYSQL_PASSWORD: petclinic
+      MYSQL_DATABASE: petclinic
+    volumes:
+      - ./dbdata:/var/lib/mysql
+      - ./petclinic/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: mysqladmin ping -h localhost -upetclinic -ppetclinic
+      interval: 5s
+      timeout: 2s
+      retries: 5
+      start_period: 10s

@@ -1,0 +1,119 @@
+version: '3.9'
+
+x-depends-on-config-server-and-eureka: &depends-on-config-server-and-eureka
+  config-server:
+    condition: service_healthy
+  discovery-server:
+    condition: service_healthy
+
+x-spring-profiles: &spring-profiles
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+
+x-database-connection: &database-connection
+  MYSQL_URL: ${MYSQL_URL}
+  MYSQL_USER: ${MYSQL_USER}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+x-healthcheck-config: &healthcheck-config
+  interval: 5s
+  timeout: 10s
+  retries: 3
+  start_period: 15s
+
+services:
+
+  config-server:
+    image: ${CONFIG_SERVER_IMAGE}
+    restart: always
+    container_name: config-server
+    environment:
+      SPRING_PROFILES_ACTIVE: ${CONFIG_SERVER_SPRING_PROFILES_ACTIVE}
+      GIT_REPO: ${CONFIG_SERVER_GIT_REPO}
+    volumes:
+      - ${CONFIG_SERVER_CONFIG_FOLDER_LOCATION_VOLUME}:/config_folder
+    healthcheck:
+      test: curl -f http://localhost:8888/actuator/health
+      <<: *healthcheck-config
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '512M'
+
+  discovery-server:
+    image: ${DISCOVERY_SERVER_IMAGE}
+    container_name: discovery-server
+    restart: always
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:8761/actuator/health
+      <<: *healthcheck-config
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '512M'
+
+  customers-service:
+    image: ${CUSTOMERS_SERVICE_IMAGE}
+    container_name: customers-service
+    environment:
+      <<: [ *spring-profiles, *database-connection ]
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+      petclinicdb:
+        condition: service_healthy
+
+  visits-service:
+    image: ${VISITS_SERVICE_IMAGE}
+    container_name: visits-service
+    environment:
+      <<: [ *spring-profiles, *database-connection ]
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+      petclinicdb:
+        condition: service_healthy
+
+  vets-service:
+    image: ${VETS_SERVICE_IMAGE}
+    container_name: vets-service
+    environment:
+      <<: [ *spring-profiles, *database-connection ]
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+      petclinicdb:
+        condition: service_healthy
+
+  api-gateway:
+    image: ${API_GATEWAY_IMAGE}
+    container_name: api-gateway
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+    ports:
+      - 8080:8080
+
+  admin-server:
+    image: ${ADMIN_SERVER_IMAGE}
+    container_name: admin-server
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+    ports:
+      - 9090:9090
+
+  petclinicdb:
+    container_name: database
+    image: ${MYSQL_IMAGE}
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PETCLINICDB_MYSQL_ROOT_PASSWORD} # just needed for root user
+      MYSQL_USER: ${PETCLINICDB_MYSQL_USER}
+      MYSQL_PASSWORD: ${PETCLINICDB_MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${PETCLINICDB_MYSQL_DATABASE}
+    volumes:
+      - ${PETCLINICDB_DATABASE_VOLUME}:/var/lib/mysql
+      - ${PETCLINICDB_INIT_SCRIPT_VOLUME}:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: mysqladmin ping -h localhost -upetclinic -ppetclinic
+      <<: *healthcheck-config

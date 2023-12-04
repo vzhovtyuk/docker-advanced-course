@@ -1,0 +1,25 @@
+version: '3.9'
+
+x-healthcheck-config: &healthcheck-config
+  interval: 5s
+  timeout: 10s
+  retries: 3
+  start_period: 15s
+
+services:
+
+  petclinicdb:
+    container_name: database
+    image: ${MYSQL_IMAGE}
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${PETCLINICDB_MYSQL_ROOT_PASSWORD} # just needed for root user
+      MYSQL_USER: ${PETCLINICDB_MYSQL_USER}
+      MYSQL_PASSWORD: ${PETCLINICDB_MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${PETCLINICDB_MYSQL_DATABASE}
+    volumes:
+      - ${PETCLINICDB_DATABASE_VOLUME}:/var/lib/mysql
+      - ${PETCLINICDB_INIT_SCRIPT_VOLUME}:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: mysqladmin ping -h localhost -upetclinic -ppetclinic
+      <<: *healthcheck-config

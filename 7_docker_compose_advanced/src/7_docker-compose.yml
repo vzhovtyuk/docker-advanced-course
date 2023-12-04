@@ -1,0 +1,109 @@
+version: '3.9'
+
+x-depends-on-config-server-and-eureka: &depends-on-config-server-and-eureka
+  config-server:
+    condition: service_healthy
+  discovery-server:
+    condition: service_healthy
+
+x-healthcheck-config: &healthcheck-config
+  interval: 5s
+  timeout: 10s
+  retries: 3
+  start_period: 15s
+
+include:
+  - docker-include.yml
+
+services:
+
+  config-server:
+    image: ${CONFIG_SERVER_IMAGE}
+    restart: always
+    container_name: config-server
+    environment:
+      SPRING_PROFILES_ACTIVE: ${CONFIG_SERVER_SPRING_PROFILES_ACTIVE}
+      GIT_REPO: ${CONFIG_SERVER_GIT_REPO}
+    volumes:
+      - ${CONFIG_SERVER_CONFIG_FOLDER_LOCATION_VOLUME}:/config_folder
+    healthcheck:
+      test: curl -f http://localhost:8888/actuator/health
+      <<: *healthcheck-config
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '512M'
+    profiles:
+      - prod
+
+  discovery-server:
+    image: ${DISCOVERY_SERVER_IMAGE}
+    container_name: discovery-server
+    restart: always
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:8761/actuator/health
+      <<: *healthcheck-config
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: '512M'
+    profiles:
+      - prod
+
+  customers-service:
+    extends:
+      file: docker-common.yml
+      service: backend-service
+    image: ${CUSTOMERS_SERVICE_IMAGE}
+    container_name: customers-service
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+      petclinicdb:
+        condition: service_healthy
+
+  visits-service:
+    extends:
+      file: docker-common.yml
+      service: backend-service
+    image: ${VISITS_SERVICE_IMAGE}
+    container_name: visits-service
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+      petclinicdb:
+        condition: service_healthy
+
+  vets-service:
+    extends:
+      file: docker-common.yml
+      service: backend-service
+    image: ${VETS_SERVICE_IMAGE}
+    container_name: vets-service
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+      petclinicdb:
+        condition: service_healthy
+
+  api-gateway:
+    image: ${API_GATEWAY_IMAGE}
+    container_name: api-gateway
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+    ports:
+      - 8080:8080
+    profiles:
+      - prod
+
+  admin-server:
+    image: ${ADMIN_SERVER_IMAGE}
+    container_name: admin-server
+    depends_on:
+      <<: *depends-on-config-server-and-eureka
+    ports:
+      - 9090:9090
+    profiles:
+      - monitoring
