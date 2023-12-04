@@ -10,7 +10,7 @@ services:
       SPRING_PROFILES_ACTIVE: native
       GIT_REPO: /config_folder
     volumes:
-      - ./petclinic/spring-petclinic-microservices-config:/config_folder
+      - ../petclinic/spring-petclinic-microservices-config:/config_folder
     healthcheck:
       test: curl -f http://localhost:8888/actuator/health
       interval: 5s
@@ -122,8 +122,8 @@ services:
       MYSQL_PASSWORD: petclinic
       MYSQL_DATABASE: petclinic
     volumes:
-      - ./dbdata:/var/lib/mysql
-      - ./petclinic/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../dbdata:/var/lib/mysql
+      - ../petclinic/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: mysqladmin ping -h localhost -upetclinic -ppetclinic
       interval: 5s

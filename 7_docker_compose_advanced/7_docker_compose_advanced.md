@@ -56,7 +56,7 @@ services:
       SPRING_PROFILES_ACTIVE: native
       GIT_REPO: /config_folder
     volumes:
-      - ./petclinic/spring-petclinic-microservices-config:/config_folder
+      - ../petclinic/spring-petclinic-microservices-config:/config_folder
     healthcheck:
       test: curl -f http://localhost:8888/actuator/health
       interval: 5s
@@ -168,8 +168,8 @@ services:
       MYSQL_PASSWORD: petclinic
       MYSQL_DATABASE: petclinic
     volumes:
-      - ./dbdata:/var/lib/mysql
-      - ./petclinic/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../dbdata:/var/lib/mysql
+      - ../petclinic/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: mysqladmin ping -h localhost -upetclinic -ppetclinic
       interval: 5s
@@ -229,7 +229,7 @@ services:
       SPRING_PROFILES_ACTIVE: native
       GIT_REPO: /config_folder
     volumes:
-      - ./petclinic/spring-petclinic-microservices-config:/config_folder
+      - ../petclinic/spring-petclinic-microservices-config:/config_folder
     healthcheck:
       test: curl -f http://localhost:8888/actuator/health
       <<: *healthcheck-config
@@ -311,8 +311,8 @@ services:
       MYSQL_PASSWORD: petclinic
       MYSQL_DATABASE: petclinic
     volumes:
-      - ./dbdata:/var/lib/mysql
-      - ./petclinic/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ../dbdata:/var/lib/mysql
+      - ../petclinic/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: mysqladmin ping -h localhost -upetclinic -ppetclinic
       <<: *healthcheck-config
@@ -364,9 +364,9 @@ PETCLINICDB_MYSQL_PASSWORD=petclinic
 PETCLINICDB_MYSQL_DATABASE=petclinic
 
 # volumes
-CONFIG_SERVER_CONFIG_FOLDER_LOCATION_VOLUME="./petclinic/spring-petclinic-microservices-config"
-PETCLINICDB_DATABASE_VOLUME="./dbdata"
-PETCLINICDB_INIT_SCRIPT_VOLUME="./petclinic/init.sql"
+CONFIG_SERVER_CONFIG_FOLDER_LOCATION_VOLUME="../petclinic/spring-petclinic-microservices-config"
+PETCLINICDB_DATABASE_VOLUME="../dbdata"
+PETCLINICDB_INIT_SCRIPT_VOLUME="../petclinic/init.sql"
 
 # images
 MYSQL_IMAGE=mysql:8.0

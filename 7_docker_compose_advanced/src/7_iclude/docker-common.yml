@@ -1,0 +1,17 @@
+
+version: '3.9'
+
+x-spring-profiles: &spring-profiles
+  SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE}
+
+x-database-connection: &database-connection
+  MYSQL_URL: ${MYSQL_URL}
+  MYSQL_USER: ${MYSQL_USER}
+  MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+
+services:
+  backend-service:
+    environment:
+      <<: [ *spring-profiles, *database-connection ]
+    profiles:
+      - prod
